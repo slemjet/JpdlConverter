@@ -1,0 +1,25 @@
+<process name="Custom" xmlns="http://jbpm.org/4.4/jpdl">
+
+    <start>
+        <transition to="print dots"/>
+    </start>
+
+    <custom name="print dots" class="org.jbpm.examples.custom.PrintDots">
+
+        <transition to="evaluate document"/>
+    </custom>
+
+    <decision name="evaluate document">
+        <handler class="org.jbpm.examples.decision.handler.ContentEvaluation"/>
+        <transition name="good" to="submit document"/>
+        <transition name="bad" to="try again"/>
+        <transition name="ugly" to="end"/>
+    </decision>
+
+    <state name="submit document"/>
+
+    <state name="try again"/>
+
+    <end name="end"/>
+
+</process>

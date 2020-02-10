@@ -1,0 +1,10 @@
+@startuml
+
+[*] --> Start : none
+Start --> PrintDots : none
+PrintDots --> EvaluateDocument : none
+EvaluateDocument --> End : ugly
+EvaluateDocument --> SubmitDocument : good
+EvaluateDocument --> TryAgain : bad
+End -> [*]
+@enduml
