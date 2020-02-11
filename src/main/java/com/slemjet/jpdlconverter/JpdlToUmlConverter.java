@@ -25,11 +25,31 @@ import java.util.stream.Stream;
 public class JpdlToUmlConverter {
     private static final Logger logger = LoggerFactory.getLogger(JpdlToUmlConverter.class);
     public static final ImmutableList<String> START_NODES = ImmutableList.of("start", "custom", "decision", "end", "state");
-    public static final ImmutableList<String> DATA_NODES = ImmutableList.of("handler", "transition");
+    public static final ImmutableList<String> DATA_NODES = ImmutableList.of("handler", "transition"/*, "field", "value"*/);
 
     public void convertToUml(File inFile) {
         logger.info(String.format("Converting inFile %s to UML", inFile.getAbsolutePath()));
 
+        HashMap<String, Node> nodes = extractNodes(inFile);
+        logger.info(String.format("Nodes map successfully extracted %s ", nodes));
+
+        String stateDiagram = populateStateSource(nodes);
+        logger.info(String.format("States diagram successfully generated %s ", stateDiagram));
+
+        String outFile = "F:\\IDEA_Projects\\JpdlConverter\\src\\main\\java\\com\\slemjet\\jpdlconverter\\uml\\converted.puml";
+        System.out.println("Writing to inFile: " + outFile);
+        // Files.newBufferedWriter() uses UTF-8 encoding by default
+        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(outFile))) {
+            writer.write(stateDiagram);
+        } // the inFile will be automatically closed
+        catch (IOException e) {
+            logger.error(String.format("could not save file %s", nodes));
+        }
+        System.out.println(stateDiagram);
+
+    }
+
+    private HashMap<String, Node> extractNodes(File inFile) {
         XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
         HashMap<String, Node> nodes = Maps.newHashMap();
         try {
@@ -48,23 +68,7 @@ public class JpdlToUmlConverter {
         } catch (XMLStreamException | FileNotFoundException e) {
             logger.warn(e.getMessage());
         }
-        logger.info(String.format("Nodes map successfully created %s ", nodes));
-
-        logger.info(String.format("Populating state diagram source inFile %s ", nodes));
-
-        String stateDiagram = populateStateSource(nodes);
-
-        String outFile = "F:\\IDEA_Projects\\JpdlConverter\\src\\main\\java\\com\\slemjet\\jpdlconverter\\uml\\converted.puml";
-        System.out.println("Writing to inFile: " + outFile);
-        // Files.newBufferedWriter() uses UTF-8 encoding by default
-        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(outFile))) {
-            writer.write(stateDiagram);
-        } // the inFile will be automatically closed
-        catch (IOException e) {
-            logger.error(String.format("could not save file %s", nodes));
-        }
-        System.out.println(stateDiagram);
-
+        return nodes;
     }
 
     private String populateStateSource(HashMap<String, Node> nodes) {
@@ -75,7 +79,7 @@ public class JpdlToUmlConverter {
         root.setName("[*]");
         sb.append(populateForNode(root, startNode, "", nodes));
 
-        sb.append("End").append(" -> ").append("[*]").append(System.lineSeparator());
+        sb.append("End").append(" --> ").append("[*]").append(System.lineSeparator());
         sb.append("@enduml");
         return sb.toString();
 
@@ -121,11 +125,13 @@ public class JpdlToUmlConverter {
             Attribute nodeName = startElement.getAttributeByName(new QName("name"));
             node.setName(nodeName != null ? nodeName.getValue() : localPart);
             node.setDecisions(Sets.newHashSet());
+
             while (eventReader.hasNext()) {
                 try {
                     XMLEvent peek = eventReader.peek();
                     if (peek.isStartElement()) {
-                        if (DATA_NODES.contains(peek.asStartElement().getName().getLocalPart())) {
+                        String subName = peek.asStartElement().getName().getLocalPart().trim();
+                        if (DATA_NODES.contains(subName) || !START_NODES.contains(subName)) {
                             StartElement attribute = eventReader.nextEvent().asStartElement();
                             String attributeName = attribute.getName().getLocalPart().trim();
                             switch (attributeName) {
@@ -138,6 +144,8 @@ public class JpdlToUmlConverter {
                                     Attribute decisionTo = attribute.getAttributeByName(new QName("to"));
                                     Decision decision = new Decision(decisionName != null ? decisionName.getValue() : StringUtils.EMPTY, decisionTo != null ? decisionTo.getValue() : StringUtils.EMPTY);
                                     node.getDecisions().add(decision);
+                                    break;
+                                default:
                                     break;
                             }
                         } else {

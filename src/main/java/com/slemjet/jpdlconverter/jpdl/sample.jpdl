@@ -11,6 +11,12 @@
 
     <decision name="evaluate document">
         <handler class="org.jbpm.examples.decision.handler.ContentEvaluation"/>
+        <field name="phase">
+            <value>"INIT"</value>
+        </field>
+        <field name="state">
+            <value>"CONVERT"</value>
+        </field>
         <transition name="good" to="submit document"/>
         <transition name="bad" to="try again"/>
         <transition name="ugly" to="end"/>
